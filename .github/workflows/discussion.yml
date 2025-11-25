@@ -1,0 +1,33 @@
+name: Update Repo
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Pull latest changes
+      run: git pull --rebase origin main
+    
+    - name: Make changes
+      run: |
+        echo "made u look $(shuf -i 1000000000-9999999999 -n 1)" | base64 | base64 > cloud.json
+    
+    - name: Commit changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add .
+        git commit -m "Add file" || echo "No changes to commit"
+    
+    - name: Push changes
+      run: git push
