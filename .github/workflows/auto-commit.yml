@@ -2,9 +2,11 @@ name: Auto Commit
 
 on:
   schedule:
-    # Runs every 5 minutes (maximum frequency allowed by GitHub)
     - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   auto-commit:
@@ -13,20 +15,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         
-      - name: Update timestamp in environment.json
+      - name: Update cloud.json with seconds
         run: |
-          # Add a timestamp to the file to make a change
-          echo "{ \"last_updated\": \"$(date -u +"%SZ")\" }" > cloud.json
+          # Just write the current seconds to the file
+          date +%s > cloud.json
           
-      - name: Commit changes
+      - name: Check if there are changes
+        id: check_changes
+        run: |
+          git diff --quiet cloud.json || echo "changed=true" >> $GITHUB_OUTPUT
+          
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changed == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add environment.json
-          git commit -m "Add file" || echo "No changes to commit"
-          
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git add cloud.json
+          git commit -m "Add file"
+          git push
